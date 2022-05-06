@@ -1,10 +1,12 @@
 node{
     
     stage("Pull Code From Git"){
+        echo "Pull Code From Git"
         git branch: 'main', url: 'https://github.com/mukesh804/docker-demo.git'
     }
     
     stage("Build Docker File"){
+        echo "Build Docker File"
         sh 'docker image build -t $JOB_NAME:v1.$BUILD_ID .'
         sh 'docker image tag $JOB_NAME:v1.$BUILD_ID mm804/$JOB_NAME:v1.$BUILD_ID'
         sh 'docker image tag $JOB_NAME:v1.$BUILD_ID mm804/$JOB_NAME:latest'
@@ -17,6 +19,7 @@ node{
             sh 'docker image push mm804/$JOB_NAME:v1.$BUILD_ID'
             sh 'docker image push mm804/$JOB_NAME:latest'
             sh 'docker image rm $JOB_NAME:v1.$BUILD_ID mm804/$JOB_NAME:latest mm804/$JOB_NAME:v1.$BUILD_ID'
+            echo "Dockerfile push Successfull"
             
         }
         
