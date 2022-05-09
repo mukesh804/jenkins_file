@@ -1,0 +1,38 @@
+node {
+    
+    stage('Pull Source Code From Git'){
+        git branch: 'main', url: 'https://github.com/mukesh804/docker-demo.git'
+        
+    }
+    
+    stage('Copy Source Code to DockerHost'){
+        sh 'sudo rsync -avh /var/lib/jenkins/workspace/dev_project/  root@172.31.11.42:/mnt/'
+        
+    }
+    
+    stage('Build Docker Image From Source Code'){
+        sshagent(['DockerHostKey']) {
+          sh "ssh -o StrictHostKeyChecking=no -l ec2-user 172.31.11.42  docker image build /mnt/ -t $JOB_NAME"
+          sh "ssh -o StrictHostKeyChecking=no -l ec2-user 172.31.11.42  docker image tag $JOB_NAME mm804/$JOB_NAME:v1.$BUILD_NUMBER"
+          sh "ssh -o StrictHostKeyChecking=no -l ec2-user 172.31.11.42  docker image tag $JOB_NAME mm804/$JOB_NAME:latest"
+          withCredentials([string(credentialsId: 'dockerhubpasswd', variable: 'dockerhublogin')]) {
+            sh "ssh -o StrictHostKeyChecking=no -l ec2-user 172.31.11.42  docker login -u mm804 -p ${dockerhublogin}"
+            sh "ssh -o StrictHostKeyChecking=no -l ec2-user 172.31.11.42  docker image push mm804/$JOB_NAME:v1.$BUILD_NUMBER"
+            sh "ssh -o StrictHostKeyChecking=no -l ec2-user 172.31.11.42  docker image push mm804/$JOB_NAME:latest"
+            sh "ssh -o StrictHostKeyChecking=no -l ec2-user 172.31.11.42  docker image rm  mm804/$JOB_NAME:latest mm804/$JOB_NAME:v1.$BUILD_NUMBER  $JOB_NAME "
+          }
+          
+        }
+        
+    }
+    
+    stage('Deploy On Dev Server'){
+        sshagent(['DockerHostKey']) {
+            sh "ssh -o StrictHostKeyChecking=no -l ec2-user 172.31.11.42 ansible-playbook /opt/play.yml"
+            
+        }
+        
+    }
+    
+    
+}
